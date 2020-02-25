@@ -48,8 +48,6 @@ typedef struct task_info {
 int current_task; //< The handle of the currently-executing task
 int num_tasks = 1;    //< The number of tasks created so far
 task_info_t tasks[MAX_TASKS]; //< Information for every task
-bool main_task_flag = true;
-
 
 /**
  * Helper function that checks if a current task is ready to run
@@ -60,27 +58,24 @@ bool task_ready(task_info_t task, int task_id){
   }
   // If task blocked to sleep
   if(task.wake_up_time){
-    //printf("Task: %d. Wake up time: %ld\n", task_id,task.wake_up_time);
     // Get current time
     struct timeval start;
     gettimeofday(&start, NULL);
-    //printf("Current TIme: %ld\n",((start.tv_sec*1000) + (start.tv_usec/1000)));
     // Check wake up time
-    if(task.wake_up_time <= ((start.tv_sec*1000) + (start.tv_usec/1000))){
-      //printf("Task: %d now ready to wake up\n", task_id);
-      
+    if(task.wake_up_time <= ((start.tv_sec*1000) + (start.tv_usec/1000))){     
       return true;
     }
   }
   // If task blocked on task
   if(task.waiting_on_task){
+    // Check if task was finished
     if(tasks[task.waiting_on_task].done){
-      //printf("Task: %d now ready to run because task %d is done\n", task_id, task.waiting_on_task);
       return true;
     }
   }
   // If task is waiting on input
   if(task.waiting_on_input){
+    // Return true check if input has been entered
     return true;
   }
 
@@ -97,8 +92,6 @@ void scheduler(){
   // Loop through tasks
   for(int k = fmod(current_task+1, num_tasks);; k = fmod(k+1,num_tasks)){
     if(task_ready(tasks[k], k)){
-      //printf("Swapping context to new task: %d\n", k);
-      //printf("Old task: %d\n", current_task);
       int tmp = current_task;
       current_task = k;
       swapcontext(&tasks[tmp].context, &tasks[k].context);
@@ -133,7 +126,6 @@ void task_exit() {
  * functiosn in this file.
  */
 void scheduler_init() {
-  // TODO: Initialize the state of the scheduler 
   // Claim zero index for the main task
   int index = 0;
   current_task = index;
@@ -194,7 +186,7 @@ void task_create(task_t* handle, task_fn_t fn) {
 
   tasks[index].done = false;
 
-  printf("Created Task: %d\n", index);
+  //printf("Created Task: %d\n", index);
 }
 
 
@@ -207,7 +199,7 @@ void task_create(task_t* handle, task_fn_t fn) {
 void task_wait(task_t handle) {
   // TODO: Block this task until the specified task has exited.
 
-  printf("Set wait on task %d for task %d\n", current_task, handle);
+  //printf("Set wait on task %d for task %d\n", current_task, handle);
 
   // Set task that this task is waiting on
   tasks[current_task].waiting_on_task = handle;
@@ -225,10 +217,6 @@ void task_wait(task_t handle) {
  * \param ms  The number of milliseconds the task should sleep.
  */
 void task_sleep(size_t ms) {
-  // TODO: Block this task until the requested time has elapsed.
-  // Hint: Record the time the task should wake up instead of the time left for it to sleep. The bookkeeping is easier this way.
-  printf("Set sleep time.\n");
-
   // Get current time
   struct timeval start;
   gettimeofday(&start, NULL);
@@ -249,22 +237,19 @@ void task_sleep(size_t ms) {
  * \returns The read character code
  */
 int task_readchar() {
-  // TODO: Block this task until there is input available.
-  // To check for input, call getch(). If it returns ERR, no input was available.
-  // Otherwise, getch() will returns the character code that was read.
-
-  int c = getch();
-  printf("%c\n", c);
-  // If no input 
-  if(c == ERR){
-    // Set that this task is waiting on INPUT
-    tasks[current_task].waiting_on_input = true;
+  for(;;){
+    int c = getch();
+    // If no input 
+    if(c == ERR){
+      // Set that this task is waiting on INPUT
+      tasks[current_task].waiting_on_input = true;
+      scheduler();
+    }
+    else{
+      tasks[current_task].waiting_on_input = false;
+      tasks[current_task].input = c;
+      break;
+    }
   }
-  else{
-    tasks[current_task].waiting_on_input = false;
-    tasks[current_task].input = c;
-  }
-
-
-  return c;
+  return tasks[current_task].input;
 }

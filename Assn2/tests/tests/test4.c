@@ -23,7 +23,7 @@ void task2_fn() {
 }
 
 int main() {
-  printf("Start main");
+  printf("Start main\n");
   // Initialize the ncurses window
   WINDOW* mainwin = initscr();
   if(mainwin == NULL) {
@@ -38,15 +38,12 @@ int main() {
   
   // Begin the test
   scheduler_init();
-  printf("initialized sched");
   task_t task1;
   task_t task2;
   
   task_create(&task1, task1_fn);
-  printf("created task 1");
 
   task_create(&task2, task2_fn);
-  printf("created task 2");
 
   
   // Only wait for task 2 to finish, since task 1 runs forever
