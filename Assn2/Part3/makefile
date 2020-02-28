@@ -7,4 +7,4 @@ clean:
 	rm -rf diningOut diningOut.dSYM
 
 diningOut: diningOut.c
-	$(CC) $(CFLAGS) -o diningOut diningOut.c
+	$(CC) $(CFLAGS) -o diningOut diningOut.c -lpthread
