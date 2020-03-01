@@ -7,4 +7,4 @@ clean:
 	rm -rf dataPar dataPar.dSYM
 
 dataPar: main.c
-	$(CC) $(CFLAGS) -o dataPar main.c -lpthread
+	$(CC) $(CFLAGS) -o dataPar main.c -lpthread -lm
