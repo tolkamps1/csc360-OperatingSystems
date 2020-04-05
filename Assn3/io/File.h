@@ -23,10 +23,15 @@ typedef struct DIRECTORY{
 
 
 int InitLLFS();
+void writeSegmentToLog();
+void getInodeMap(FILE *disk);
+void getFreeMap(FILE *disk);
 t_directory* tokenize_directory(unsigned char *buffer);
 t_inode* tokenize_inode(unsigned char *buffer, int inode_num);
 void writeFile(char* filename, char* update);
 void readFile(char* filename);
+void createFile(char* filename, t_directory* direct);
+
 void print_buffer(unsigned char* buffer, int size);
 void init_buffer(unsigned char* buffer, int size);
 void set_block(unsigned char* buffer, int block_num);
