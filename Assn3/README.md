@@ -3,10 +3,11 @@ Shaelyn Tolkamp - V00875259
 
 
 ## Resources
-Code adapted from Tutorials provided for CSC 360. Makefile adapted from Alex McRaes post to the forum. 
+Some code for binary operations adapted from Tutorials provided for CSC 360. Makefile adapted from Alex McRaes post to the forum. Discussion of concepts with Reed McIlwain.
 
 ## Testing
-While creating this file system, most of my initial testing to get things working was done manually using hexdump for vdisk, and printing the buffer in binary.
+While creating this file system, most of my initial testing to get things working was done manually using hexdump and hexdump -C for vdisk, and printing the buffer in binary. I automated the calls to my functions in test01.c.
 
 ## Features/Functionality
-Each directory can only have 16 entries. I added this limit to make this part simpler becuase then a directory does not an ID and to cover multiple blocks.
+Basic operations on a Log Filesystem: reading, writing, and creating files. For full functionality please see report.txt.
+
