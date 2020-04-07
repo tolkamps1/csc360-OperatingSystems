@@ -1,0 +1,40 @@
+﻿CSC360: Operating System                                        Shaelyn Tolkamp - V00875259
+Assignment 3: Log Filesystem
+Report
+
+
+A write up of the file system describing design and implementation decisions and tradeoffs
+
+
+Implemented Functionality:
+* Initialize the log file system with a superblock, free block map, and inode map.
+* Initialize log file with an empty root directory
+* Create a file in root directory
+* Create a subdirectory
+* Write to a file in root directory
+* Read directories and files in root directory
+* Delete a file from the root directory
+* Delete a subdirectory (and it’s contents) from the root directory
+
+
+Restrictions:
+* Cannot have a directory with more than 16 entries. 
+   * Each directory can only have 16 entries. I added this limit to make this part simpler and more efficient because then a directory does not need an ID and does not need to cover multiple blocks.
+* Cannot have a file with more than 10*BLOCK_SIZE bytes
+   * I did not implement single indirect inodes nor double indirect inodes as these were listed as unnecessary in the tutorial slides.
+* The file system will eventually run out of space
+   * Garbage collection was not part of this assignment so once the 4096 blocks fill up InitLLFS() will need to be called to start over. All existing data will be lost.
+   * Additionally, because there is no garbage collection, when deleting a file or subdirectory, the reference is removed from the current directory, but these blocks are not free’d, nor is the inode map updated to remove these references. However, it is still impossible to hit these ‘deleted’ blocks because they will not be found in the directory anymore.
+* You cannot delete the root directory
+   * This is a restriction I put in because there is not way to create a file or directory without having an existing directory.
+
+
+Design Decisions
+The overall design of this system is based off of the suggestions in the assignment handout. Design decisions are listed here along with any divergence from the handout.
+* I made a struct for iNodes, Directories, and each entry in a directory, these can be found in File.h. The design for an inode was changed to allow the first 10 blocks to be listed as integers. This made the inode 52 bytes. Additionally, I let each inode take up a whole block. This simplified the inode map and the free block map. While this results in the file system filling up a lot faster (instead of up to 16 inodes per block there is 1). This made the data structures and analysis a lot easier to implement. And because this filesystem is not huge anyways, I did not think this would be that much of a hindrance.
+Regarding the Log in LLFS:
+* This implementation of a file system does not have all of the benefits of a log file system like limited writes and being read based. I created a segment buffer to store the new blocks of the files and inodes being updated; however, this segment is written to disk nearly at the end of every function. The reason I did this was because of the complications that would occur when a file was written to and then immediately after. This would require a check of the segment and a read from the segment itself along with vdisk for large files to get the whole file and the updated block(s). I did create an array (backlog) that flagged if an inode was updated and not yet written to vdisk. When a file was being read, backlog would first be checked and force the current segment to be written to vdisk if necessary. However, I did not want to have a lot of updates waiting in the segment and inode map and free map, because if the system crashed that would all be lost. As a result of these decisions, while the number of writes is less, it is still more than perhaps a traditional log style filesystem.
+
+
+Tests
+Test print a test sequence and read file and directories to stdout.
