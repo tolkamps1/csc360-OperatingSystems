@@ -65,7 +65,7 @@ int InitLLFS(){
 
         // Create root directory
         // Init iNode  for root v
-        printf("Create INode for root.\n");
+        //printf("Create INode for root.\n");
         segment_size = 5;
         segment = (unsigned char*) malloc(BLOCK_SIZE*segment_size);
         memset(segment, 0, BLOCK_SIZE*segment_size);
@@ -73,7 +73,7 @@ int InitLLFS(){
         unsigned char* inode_buffer;
         inode_buffer = segment;
         t_inode root;
-        root.size = 512;
+        root.size = 32;
         root.flags = 1; // directory is 1
         memset(root.block_nums, 0, 10*sizeof(int));
         root.block_nums[0] = 11; // root dir is first free block after it's inode
@@ -81,14 +81,14 @@ int InitLLFS(){
         memcpy(inode_buffer + sizeof(int) * 1, &root.flags, sizeof(int));
         memcpy(inode_buffer + sizeof(int) * 2, &root.block_nums, sizeof(root.block_nums));
 
-        printf("Update inode mapping.\n");
+        //printf("Update inode mapping.\n");
         // Update iNode map
         inode_map = (unsigned char*) malloc(BLOCK_SIZE);
         memset(inode_map, 0, BLOCK_SIZE);
         memset(inode_map, 10, sizeof(char));
 
 
-        printf("Init root directory.\n");
+        //printf("Init root directory.\n");
         // Init root directory with itself '.'
         //unsigned char* dir_buffer = InitDir();
         unsigned char* dir_buffer;
@@ -98,16 +98,15 @@ int InitLLFS(){
         entry.inodeID = 1; // this inode
         backlog[1] = 1;
         entry.filename[0] = '.';
-        entry.filename[1] = '\0';
-        printf("root file name %s\n", entry.filename);
+        //printf("root file name %s\n", entry.filename);
         memcpy(dir_buffer, &entry.inodeID, 1);
         memcpy(dir_buffer + 1, &entry.filename, 31);
 
-        printf("Write seg to log.\n");
+        //printf("Write seg to log.\n");
         writeSegmentToLog();
         return 1;
     }else{
-        printf("Failed to open/create vdisk.\n");
+        printf("LLFS: Failed to open/create vdisk.\n");
         return -1;
     }
 }
@@ -122,27 +121,27 @@ void writeSegmentToLog(){
         // append segment to log
         for(int k = 0; k < segment_size; k++){
             writeBlock(disk, segment_block+k, (char*) segment+(BLOCK_SIZE*k));
-            printf("wrote seg %d\n", k);
+            //printf("wrote seg %d\n", k);
         }
         free(segment);
 
         // update inode mapping
         writeBlock(disk, 2, (char*) inode_map);
         free(inode_map);
-        printf("wrote inode map.\n");
+        //printf("wrote inode map.\n");
 
         // update free list
         writeBlock(disk, 1, (char*) free_map);
         free(free_map);
-        printf("wrote free list\n");
+        //printf("wrote free list\n");
 
         //clear backlog list
         memset(&backlog, 0, sizeof(int)*(NUM_INODES+1));
-        printf("cleared backlog.\n");
+        //printf("cleared backlog.\n");
 
         fclose(disk);
     }else{
-        printf("Failed to write to disk, could not open %s", vdisk_path);
+        printf("LLFS: Failed to write to disk, could not open %s", vdisk_path);
     }
 
 }
@@ -157,7 +156,7 @@ void writeSegmentToLog(){
  * Asumption is that this is called in root directory
 */
 void readFile(char* filename){
-    printf("Filename to read: %s\n", filename);
+    //printf("Filename to read: %s\n", filename);
     FILE* disk = fopen(vdisk_path, "rb"); //Open file for reading.
     if(disk){
         unsigned char* buffer;
@@ -173,9 +172,9 @@ void readFile(char* filename){
         int root_block = rooti->block_nums[0];
 
 
-        printf("Block num for root %d\n", root_block);
+        //printf("Block num for root %d\n", root_block);
         readBlock(disk, root_block, (char *) buffer);
-        print_buffer(buffer, BLOCK_SIZE);
+        //print_buffer(buffer, BLOCK_SIZE);
         //Get inode id from directory
         t_directory* direct = tokenize_directory(buffer);
         free(buffer);
@@ -183,23 +182,22 @@ void readFile(char* filename){
         for(int k = 0; k < 16; k++){
             unsigned char* fname = direct->directories[k].filename;
             if(strcmp((char*)fname, filename) == 0){
-                printf("found entry-> %s\n", fname);
+                //printf("found entry-> %s\n", fname);
                 inodeID = direct->directories[k].inodeID;
-                printf("inodeID: %d\n", inodeID);
+                //printf("inodeID: %d\n", inodeID);
                 break;
             }
         }
         if(inodeID == 0){
-            printf("File name %s not found.\n", filename);
+            printf("LLFS: File name %s not found.\n", filename);
             free(direct);
             fclose(disk);
             return;
 
         }
         // Check inode ID first in backlog to see if writeSegToLog is necessary first
-        printf("inodeID>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> %d",inodeID);
         if(backlog[inodeID] != 0){
-            printf("FOUnd in backlog!!!!\n");
+            //printf("FOUnd in backlog!!!!\n");
             writeSegmentToLog();
             getInodeMap(disk);
         }
@@ -207,24 +205,28 @@ void readFile(char* filename){
         // Look up inode block from inode map
         //print_buffer(inode_map, BLOCK_SIZE);
         int inode_block = inode_map[inodeID-1];
-        printf("INode BLock %d\n", inode_block);
 
         //Get file block nums from inode
         unsigned char* inode_buffer;
         inode_buffer = (unsigned char*) malloc(BLOCK_SIZE);
-        printf("Inode in block %d\n", inode_block);
         readBlock(disk, inode_block, (char*) inode_buffer);
         //printf("inode buffer:\n");
         //print_buffer(inode_buffer, BLOCK_SIZE);
         t_inode* inode = tokenize_inode(inode_buffer);
         free(inode_buffer);
-        printf("INODE size %d\n", inode->size);
+        /*printf("INODE size %d\n", inode->size);
         printf("INODE flags %d\n", inode->flags);
         printf("INODE block_nums %d\n", inode->block_nums[0]);
         for(int k = 0; k < 10; k++){
             printf("%d ", inode->block_nums[k]);
+        }*/
+        int dir_flag = inode->flags;
+        if(dir_flag == 1){ // if dir
+            printf("LLFS: Directory %s\n", filename);
+            printf("LLFS: INodeID     Filename\n");
+        }else{
+            printf("LLFS: File %s\n", filename);
         }
-
         // read each block
         for(int k = 0; k < 10; k++){
             int fileblockID = 0;
@@ -233,15 +235,35 @@ void readFile(char* filename){
                 unsigned char* file_buffer;
                 file_buffer = (unsigned char*) malloc(BLOCK_SIZE);
                 readBlock(disk, fileblockID, (char *) file_buffer);
-                printf("file buffer in block %d\n", fileblockID);
-                print_buffer(file_buffer, BLOCK_SIZE);
+                //Print it out to stdout
+                if(dir_flag == 1){ // if dir
+                    for (int i = 1; i <= (inode->size); i++) {
+                        if(i%32 == 1){
+                            printf("      %-12d", file_buffer[i-1]);
+                        }else{
+                            printf("%c", file_buffer[i-1]);
+                            if(i % 32 == 0){
+                                printf("\n");
+                            }
+                        }
+                    }
+                    printf("\n");
+                }
+                else{ // if file
+                    for (int i = 1; i <= BLOCK_SIZE; i++) {
+                        printf("%c", file_buffer[i-1]);
+                    }
+                    printf("\n");
+                }
+                //printf("file buffer in block %d\n", fileblockID);
+                //print_buffer(file_buffer, BLOCK_SIZE);
                 free(file_buffer);
             }
         }
         free(inode_map);
         fclose(disk);
     }else{
-        printf("Failed to open vdisk.\n");
+        printf("LLFS: Failed to open vdisk.\n");
     }
 }
 
@@ -305,21 +327,21 @@ int getNextINodeID(FILE *disk){
  * Append write to block and create new block to add to log
 */
 void writeFile(char* filename, char* update){
-    printf("Filename to write to: %s\n", filename);
+    //printf("Filename to write to: %s\n", filename);
     FILE* disk = fopen(vdisk_path, "rb+"); //Open file for update (reading and writing).
     if(disk){
         unsigned char* buffer;
         buffer = (unsigned char*) malloc(BLOCK_SIZE);
         getInodeMap(disk);
         int root_inode = inode_map[0];
-        printf("Root inode: %d\n", root_inode);
+        //printf("Root inode: %d\n", root_inode);
         unsigned char* i_buffer;
         i_buffer = (unsigned char*) malloc(BLOCK_SIZE);
         readBlock(disk, root_inode, (char *) i_buffer);
         t_inode* rooti = tokenize_inode(i_buffer);
         free(i_buffer);
         int root_block = rooti->block_nums[0];
-        printf("Root block: %d\n", root_block);
+        //printf("Root block: %d\n", root_block);
 
         readBlock(disk, root_block, (char*) buffer);
         //print_buffer(buffer, BLOCK_SIZE);
@@ -330,16 +352,16 @@ void writeFile(char* filename, char* update){
         for(int k = 0; k <16; k++){
             unsigned char* fname = direct->directories[k].filename;
             if(strcmp((char*)fname, filename) == 0){
-                printf("found entry\n");
-                printf("Directory %s\n", fname);
+                //printf("found entry\n");
+                //printf("Directory %s\n", fname);
                 inodeID = direct->directories[k].inodeID;
-                printf("inodeID: %d\n", inodeID);
+                //printf("inodeID: %d\n", inodeID);
                 break;
             }
         }
         // File does not exist
         if(inodeID == 0){
-            printf("File does not yet exist.\n");
+            //printf("File does not yet exist.\n");
             // create file
             fclose(disk);
             createFile(filename, update, direct, 0);
@@ -355,7 +377,7 @@ void writeFile(char* filename, char* update){
             // look up file
             getInodeMap(disk);
             int inode_block = inode_map[inodeID-1];
-            printf("INode of file to write to %d\n", inode_block);
+            //printf("INode of file to write to %d\n", inode_block);
             i_buffer = (unsigned char*) malloc(BLOCK_SIZE);
             readBlock(disk, inode_block, (char *) i_buffer);
             t_inode* filei = tokenize_inode(i_buffer);
@@ -364,20 +386,20 @@ void writeFile(char* filename, char* update){
             // find last block 
             int full_blocks = 0;
             int file_size = filei->size;
-            printf("file size %d\n", file_size);
+            //printf("file size %d\n", file_size);
             full_blocks = file_size / BLOCK_SIZE;
-            printf("!!!!! Number of full blocks: %d\n", full_blocks);
+            //printf("!!!!! Number of full blocks: %d\n", full_blocks);
             int file_block = filei->block_nums[full_blocks];
-            printf("last file block %d\n", file_block);
+            //printf("last file block %d\n", file_block);
 
             // compute # blocks needed
             int update_size = strlen(update);
-            printf("Update size: %d\n", update_size);
+            //printf("Update size: %d\n", update_size);
             int extra = BLOCK_SIZE - (file_size%BLOCK_SIZE);
-            printf("extra room in file block: %d\n", extra);
+            //printf("extra room in file block: %d\n", extra);
 
             if((update_size+file_size) > 10*BLOCK_SIZE){
-                printf("File update too big remain in <= 10 blocks.\n");
+                printf("LLFS: File update too big remain in <= 10 blocks.\n");
                 return;
             }
             int blocks_needed = 0;
@@ -395,9 +417,9 @@ void writeFile(char* filename, char* update){
             //print_buffer(file_buffer, BLOCK_SIZE*(blocks_needed+1));
 
 
-            printf("Additional blocks needed for this update %d\n", blocks_needed);
+            ////printf("Additional blocks needed for this update %d\n", blocks_needed);
             segment_size = blocks_needed+2; // additional blocks + 1 for new inode and +1 for block appended
-            printf("Segment size for this update %d\n", segment_size);
+            //printf("Segment size for this update %d\n", segment_size);
 
             segment = (unsigned char*) malloc(BLOCK_SIZE*segment_size);
             memset(segment, 0, BLOCK_SIZE*segment_size);
@@ -405,7 +427,7 @@ void writeFile(char* filename, char* update){
             //get next free block from free map
             getFreeMap(disk);
             int free_block = getNextFreeBlock(disk);
-            printf("Free block of New Inode for updated file: %d\n", free_block);
+            //printf("Free block of New Inode for updated file: %d\n", free_block);
 
             //create new inode for file
             unsigned char* inode_buffer;
@@ -433,11 +455,11 @@ void writeFile(char* filename, char* update){
                     count ++;
                 }
             }
-            printf("New block list: \n");
+            /*printf("New block list: \n");
             for(int k = 0; k < 10; k++){
                 printf("%d ", file_blocks[k]);
             }
-            printf("\n");
+            printf("\n");*/
             memcpy(inode_buffer, &newfile->size, sizeof(int));
             memcpy(inode_buffer + sizeof(int) * 1, &newfile->flags, sizeof(int));
             memcpy(inode_buffer + sizeof(int) * 2, &file_blocks, sizeof(int)*10);
@@ -459,7 +481,7 @@ void writeFile(char* filename, char* update){
 
         free(direct);
     }else{
-        printf("Failed to open vdisk.\n");
+        printf("LLFS: Failed to open vdisk.\n");
     }
 }
 
@@ -479,28 +501,28 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
 
         // compute # blocks needed
         int update_size = strlen(contents);
-        printf("Update size: %d\n", update_size);
+        //printf("Update size: %d\n", update_size);
 
         if((update_size) > 10*BLOCK_SIZE){
-            printf("File update too big remain in <= 10 blocks.\n");
+            printf("LLFS: File update too big remain in <= 10 blocks. Must be < %d bytes.\n", (10*BLOCK_SIZE));
             return;
         }
         int blocks_needed = 0;
         for(int remaining = (update_size-BLOCK_SIZE); remaining > 0; remaining -= BLOCK_SIZE){
             blocks_needed ++;
         }
-        printf("Additional blocks needed for this update %d\n", blocks_needed);
+        //printf("Additional blocks needed for this update %d\n", blocks_needed);
 
         segment_size = blocks_needed+4; // file inode, dir, dir inode, file first block
         segment = (unsigned char*) malloc(BLOCK_SIZE*segment_size);
         memset(segment, 0, BLOCK_SIZE*segment_size);
         // Get iNode map
         int inodeID = getNextINodeID(disk);
-        printf("New Inode ID: %d\n", inodeID);
+        //printf("New Inode ID: %d\n", inodeID);
         //get next free block from free map
         getFreeMap(disk);
         int free_block = getNextFreeBlock(disk);
-        printf("Free block: %d\n", free_block);
+        //printf("Free block: %d\n", free_block);
         //create inode for file
         // update inode file blocks
         int file_blocks[10];
@@ -515,11 +537,11 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
             file_blocks[k] = free_block+count;
             count ++;
         }
-        printf("New block list: \n");
+        /*printf("New block list: \n");
         for(int k = 0; k < 10; k++){
             printf("%d ", file_blocks[k]);
         }
-        printf("\n");
+        printf("\n");*/
 
         unsigned char* inode_buffer;
         inode_buffer = segment;
@@ -548,16 +570,17 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
         dirInode = direct->directories[0].inodeID;
         // inode to update for dir
         // Create new entry in current directory
-        int fn_length = 31;
+        int fn_length = 30;
         if(strlen(fname) < fn_length) fn_length = strlen(fname);
-        for(int k = 0; k <16; k++){
+        int k;
+        for(k = 0; k <16; k++){
             if(direct->directories[k].inodeID == 0){
                 direct->directories[k].inodeID = inodeID;
+                memset(&direct->directories[k].filename, '\0', 31);
                 memcpy(direct->directories[k].filename, fname, fn_length);
-                memset(&direct->directories[k].filename[31], '\0', 1);
                 break;
             }else if(k == 15){
-                printf("Directory full.\n");
+                printf("LLFS: Directory full. Cannot create new entry.\n");
                 return;
             }
         }
@@ -572,7 +595,7 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
         unsigned char* dirinode_buffer;
         dirinode_buffer = segment+(BLOCK_SIZE*(blocks_needed+2));
         t_inode rooti;
-        rooti.size = 512;
+        rooti.size = 32*(k+1);
         rooti.flags = 1; // directory is 1
         memset(rooti.block_nums, 0, 10*sizeof(int));
         rooti.block_nums[0] = (free_block+3);
@@ -581,7 +604,7 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
         memcpy(dirinode_buffer + sizeof(int) * 2, &rooti.block_nums, 10*sizeof(int));
 
         // Update inode map and free map with new dir info
-        printf("*** %d\n", dirInode);
+        //printf("*** %d\n", dirInode);
         inode_map[dirInode-1] = (free_block+blocks_needed+2);
         set_block(free_map, free_block+blocks_needed+2); // for dir's inode
         set_block(free_map, free_block+blocks_needed+3); // for dir
@@ -590,7 +613,7 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
         writeSegmentToLog();
     }
     else{
-        printf("Failed to open vdisk.\n");
+        printf("LLFS: Failed to open vdisk.\n");
     }
 }
 
@@ -601,21 +624,21 @@ void createFile(char* fname, char* contents, t_directory* direct, int dir_flag){
  * call create file with contents of new directory
 */
 void writeDirectory(char* dir_name){
-    printf("Subdirectory to create: %s\n", dir_name);
+    //printf("Subdirectory to create: %s\n", dir_name);
     FILE* disk = fopen(vdisk_path, "rb+"); //Open file for update (reading and writing).
     if(disk){
         unsigned char* buffer;
         buffer = (unsigned char*) malloc(BLOCK_SIZE);
         getInodeMap(disk);
         int root_inode = inode_map[0];
-        printf("Root inode: %d\n", root_inode);
+        //printf("Root inode: %d\n", root_inode);
         unsigned char* i_buffer;
         i_buffer = (unsigned char*) malloc(BLOCK_SIZE);
         readBlock(disk, root_inode, (char *) i_buffer);
         t_inode* rooti = tokenize_inode(i_buffer);
         free(i_buffer);
         int root_block = rooti->block_nums[0];
-        printf("Root block: %d\n", root_block);
+        //printf("Root block: %d\n", root_block);
 
         readBlock(disk, root_block, (char*) buffer);
         //print_buffer(buffer, BLOCK_SIZE);
@@ -625,14 +648,14 @@ void writeDirectory(char* dir_name){
         int entry_line = 0;
         for(int k = 0; k <16; k++){
             if(direct->directories[k].inodeID == 0){
-                printf("found next blank\n");
+                //printf("found next blank\n");
                 entry_line = k;
                 break;
             }
         }
         // File does not exist
         if(entry_line == 0){
-            printf("Directory Full.\n");
+            printf("LLFS: Directory Full. Cannot add new entry.\n");
             fclose(disk);
             return;
         }
@@ -644,7 +667,6 @@ void writeDirectory(char* dir_name){
             memset(entry.filename, '\0', 31*sizeof(char));
             entry.inodeID = getNextINodeID(disk);
             entry.filename[0] = '.';
-            entry.filename[1] = '\0';
             memcpy(dir_buffer, &entry.inodeID, 1);
             memcpy(dir_buffer + 1, &entry.filename, 31);
             createFile(dir_name, (char*) dir_buffer, direct, 1);
@@ -652,10 +674,9 @@ void writeDirectory(char* dir_name){
 
         free(direct);
     }else{
-        printf("Failed to open vdisk.\n");
+        printf("LLFS: Failed to open vdisk.\n");
     }
 }
-
 
 
 
@@ -667,24 +688,27 @@ void writeDirectory(char* dir_name){
  * update inode map 
 */
 void DeleteFile(char* fname){
-    printf("File to delete : %s\n", fname);
+    //printf("File to delete : %s\n", fname);
+    if(strcmp(fname, ".") == 0){
+        printf("LLFS: Cannot delete the root dir: %s", fname);
+        return;
+    }
     FILE* disk = fopen(vdisk_path, "rb+"); //Open file for update (reading and writing).
     if(disk){
         unsigned char* buffer;
         buffer = (unsigned char*) malloc(BLOCK_SIZE);
         getInodeMap(disk);
         int root_inode = inode_map[0];
-        printf("Root inode: %d\n", root_inode);
+        //printf("Root inode: %d\n", root_inode);
         unsigned char* i_buffer;
         i_buffer = (unsigned char*) malloc(BLOCK_SIZE);
         readBlock(disk, root_inode, (char *) i_buffer);
         t_inode* rooti = tokenize_inode(i_buffer);
         free(i_buffer);
         int root_block = rooti->block_nums[0];
-        printf("Root block: %d\n", root_block);
+        //printf("Root block: %d\n", root_block);
 
         readBlock(disk, root_block, (char*) buffer);
-        //print_buffer(buffer, BLOCK_SIZE);
         // look up file
         t_directory* direct = tokenize_directory(buffer);
         free(buffer);
@@ -693,16 +717,16 @@ void DeleteFile(char* fname){
         for(k = 0; k <16; k++){
             unsigned char* filename = direct->directories[k].filename;
             if(strcmp(fname, (char*)filename) == 0){
-                printf("found entry\n");
-                printf("Directory %s\n", filename);
+                //printf("found entry\n");
+                //printf("Directory %s\n", filename);
                 inodeID = direct->directories[k].inodeID;
-                printf("inodeID: %d\n", inodeID);
+                //printf("inodeID: %d\n", inodeID);
                 break;
             }
         }
         // File does not exist
         if(inodeID == 0){
-            printf("Cannot delete file. %s does not exist.\n", fname);
+            printf("LLFS: Cannot delete file. %s does not exist.\n", fname);
             free(direct);
             fclose(disk);
             return;
@@ -711,7 +735,7 @@ void DeleteFile(char* fname){
             // Remove entry from root directory
             
             segment_size = 2; // new root inode new root file block
-            printf("Segment size for this update %d\n", segment_size);
+            //printf("Segment size for this update %d\n", segment_size);
 
             segment = (unsigned char*) malloc(BLOCK_SIZE*segment_size);
             memset(segment, 0, BLOCK_SIZE*segment_size);
@@ -719,7 +743,7 @@ void DeleteFile(char* fname){
             //get next free block from free map
             getFreeMap(disk);
             int free_block = getNextFreeBlock(disk);
-            printf("Free block of New Inode for updated file: %d\n", free_block);
+            //printf("Free block of New Inode for updated file: %d\n", free_block);
 
             // Update inode map to remove file
             inode_map[inodeID-1] = 0;
@@ -751,7 +775,7 @@ void DeleteFile(char* fname){
             memcpy(dirinode_buffer + sizeof(int) * 2, &rooti.block_nums, 10*sizeof(int));
 
             // Update inode map and free map with new dir info
-            printf("*** %d\n", dirInode);
+            //printf("*** %d\n", dirInode);
             inode_map[dirInode-1] = (free_block);
             set_block(free_map, free_block); // for dir's inode
             set_block(free_map, free_block+1); // for dir
@@ -762,7 +786,7 @@ void DeleteFile(char* fname){
 
         free(direct);
     }else{
-        printf("Failed to open vdisk.\n");
+        printf("LLFS: Failed to open vdisk.\n");
     }
 }
 
@@ -833,16 +857,9 @@ void print_buffer(unsigned char buffer[], int size){
 }
 
 
-/* Checks to see if block is set
+/* Checks to see if bit in byte is set
 */
 int check_set_block(unsigned char byte){
-    /*int index = block_num / 8;
-    int bit_index = (block_num % 8);
-    printf("Buffer index shifted ================================   %d\n",(buffer[index] << bit_index) );
-    if((buffer[index] << bit_index) & 1 ){
-        printf("Bit already set.\n");
-        return 0;
-    }else return 1;*/
     int k;
     for (int i = 7; i >= 0; i--){
         k = byte >> i;
@@ -862,10 +879,6 @@ int check_set_block(unsigned char byte){
 void set_block(unsigned char buffer[], int block_num){
     int index = block_num / 8;
     int bit_index = (block_num % 8);
-    
-    printf("SET\n");
-    printf("Index: %d\n", index);
-    printf("Bit Index: %d\n", bit_index);
     buffer[index] |= 1UL << bit_index;
 }
 
@@ -876,36 +889,5 @@ void set_block(unsigned char buffer[], int block_num){
 void unset_block(unsigned char buffer[], int block_num){
     int index = block_num / 8;
     int bit_index = (block_num % 8);
-    
-    printf("UNSET\n");
-    printf("Index: %d\n", index);
-    printf("Bit Index: %d\n", bit_index);
     buffer[index] &= ~(1UL << bit_index);
-}
-
-
-
-/**
- * print binary
- * Taken from tutorial 10
- */
-void print_binary(unsigned char byte){
-    int k;
-    for (int i = 7; i >= 0; i--){
-        k = byte >> i;
-        if (k & 1)
-            printf("1");
-        else
-            printf("0");
-    }
-    printf("\n");
-}
-
-/**
- * bitwise or
- * Taken from tutorial 10
- */
-unsigned char bitwise_or(unsigned char byte1, unsigned char byte2){
-    unsigned char byte3 = byte1 | byte2;
-    return byte3;
 }

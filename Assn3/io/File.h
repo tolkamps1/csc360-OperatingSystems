@@ -37,11 +37,9 @@ void writeDirectory(char* dir_name);
 void DeleteFile(char* fname);
 int check_set_block(unsigned char byte);
 
-
+// Functions taken/adapted from Tutorial 10
 void print_buffer(unsigned char* buffer, int size);
 void init_buffer(unsigned char* buffer, int size);
 void set_block(unsigned char* buffer, int block_num);
 void unset_block(unsigned char* buffer, int block_num);
-void print_binary(unsigned char byte);
-unsigned char bitwise_or(unsigned char byte1, unsigned char byte2);
 
